@@ -1,34 +1,38 @@
-trigger: none # run manually (audit)
+trigger: none # Manual run (recommended for audits)
+pr: none # Do not run on PR by default
 
 pool:
   vmImage: ubuntu-latest
 
 steps:
-  # 1) Checkout the GitHub repo
+  # 1) Checkout the GitHub repo (this repo) to the agent
   - checkout: self
     fetchDepth: 1
 
-  # 2) Run the audit script
+  # 2) Run the audit script with tracing
   - bash: |
       set -euo pipefail
-
-      echo "Repo root: $(Build.SourcesDirectory)"
       cd "$(Build.SourcesDirectory)"
+
+      echo "Listing tools folder:"
+      ls -la tools || true
 
       echo "Make script executable..."
       chmod +x tools/bd_detect_audit_v2.sh
 
-      echo "Run audit..."
-      ./tools/bd_detect_audit_v2.sh . bd_detect_audit_v2.csv
+      echo "Run audit with tracing..."
+      bash -x ./tools/bd_detect_audit_v2.sh . bd_detect_audit_v2.csv
 
-      echo "Preview CSV (first 30 lines):"
+      echo "Preview CSV:"
       head -n 30 bd_detect_audit_v2.csv || true
     displayName: "Run Detect/Black Duck Audit (v2)"
 
-  # 3) Publish CSV as artifact
+  # 3) Publish the CSV as an artifact even if the audit step fails
   - task: PublishPipelineArtifact@1
+    condition: always()
     inputs:
       targetPath: '$(Build.SourcesDirectory)/bd_detect_audit_v2.csv'
       artifact: 'bd-detect-audit-v2'
       publishLocation: 'pipeline'
-    displayName: "Publish audit report"
+    displayName: "Publish audit CSV artifact (always)"
+
