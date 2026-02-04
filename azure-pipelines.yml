@@ -4,29 +4,127 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
+  # If Coverity CLI is already installed on agent, keep this as-is:
   COVERITY_HOME: /opt/coverity
+
+  # If you download the CLI in the pipeline, set this instead (see optional step below):
+  # COVERITY_HOME: $(Agent.ToolsDirectory)/coverity
+
   COVERITY_IDIR: $(Build.SourcesDirectory)/idir
+  COVERITY_URL: https://coverity.example.com
+  COVERITY_STREAM: juice-shop-main
+
+  # Optional: publish local HTML report too
+  COVERITY_REPORT_DIR: $(Build.SourcesDirectory)/coverity-report
 
 steps:
-  - checkout: self
+- checkout: self
+  clean: true
 
-  # ------------------------------------------------------------
-  # Synopsys Coverity CLI SAST integration (direct invocation)
-  # ------------------------------------------------------------
-  - bash: |
-      echo "Starting Coverity SAST scan"
+# -----------------------------
+# Optional: Use a specific Node version (POC-friendly)
+# -----------------------------
+- task: NodeTool@0
+  inputs:
+    versionSpec: "18.x"
+  displayName: "Use Node.js 18"
 
-      echo "cov-build --dir $(COVERITY_IDIR) npm run build"
-      echo "cov-analyze --dir $(COVERITY_IDIR) --all"
-      echo "cov-commit-defects --dir $(COVERITY_IDIR) \
-            --url https://coverity.example.com \
-            --stream juice-shop-main"
+# ------------------------------------------------------------
+# Optional: Download and install Coverity CLI (enable if needed)
+# ------------------------------------------------------------
+# - bash: |
+#     set -euo pipefail
+#     echo "Installing Coverity CLI into $(Agent.ToolsDirectory)/coverity"
+#     mkdir -p "$(Agent.ToolsDirectory)/coverity"
+#     cd "$(Agent.ToolsDirectory)/coverity"
+#
+#     # Example download (replace with your internal artifact URL)
+#     # If no auth needed:
+#     #   curl -L -o coverity.tgz "$(COVERITY_CLI_URL)"
+#     #
+#     # If auth token needed:
+#     #   curl -L -H "Authorization: Bearer $(COVERITY_CLI_TOKEN)" -o coverity.tgz "$(COVERITY_CLI_URL)"
+#
+#     echo "ERROR: Replace this section with your internal Coverity CLI download method"
+#     exit 1
+#
+#     tar -xzf coverity.tgz --strip-components=1
+#     echo "Coverity CLI installed. Listing bin:"
+#     ls -la "$(Agent.ToolsDirectory)/coverity/bin"
+#   displayName: "Install Coverity CLI (Optional)"
 
-    displayName: "Coverity SAST Scan (CLI)"
+# ------------------------------------------------------------
+# Coverity SAST scan - Direct CLI invocation (POC)
+# ------------------------------------------------------------
+- bash: |
+    set -euo pipefail
 
-  # Optional: artifact publish (very common)
-  - task: PublishBuildArtifacts@1
-    displayName: "Publish Coverity Analysis Artifacts (POC)"
-    inputs:
-      pathToPublish: '$(COVERITY_IDIR)'
-      artifactName: 'coverity-idir'
+    echo "=== Coverity SAST scan starting ==="
+    echo "Repo: $(Build.Repository.Name)"
+    echo "Branch: $(Build.SourceBranch)"
+    echo "Commit: $(Build.SourceVersion)"
+    echo "idir: $(COVERITY_IDIR)"
+
+    # Ensure Coverity binaries exist
+    if [ ! -x "$(COVERITY_HOME)/bin/cov-build" ]; then
+      echo "ERROR: cov-build not found at $(COVERITY_HOME)/bin/cov-build"
+      echo "Either preinstall Coverity CLI on the agent or enable the 'Install Coverity CLI' step."
+      exit 1
+    fi
+
+    export PATH="$(COVERITY_HOME)/bin:$PATH"
+
+    # Prepare idir
+    rm -rf "$(COVERITY_IDIR)"
+    mkdir -p "$(COVERITY_IDIR)"
+
+    echo "=== Install dependencies ==="
+    npm ci
+
+    echo "=== Capture build with cov-build ==="
+    # For JS/TS repos: this captures build execution; adjust command if your build differs
+    cov-build --dir "$(COVERITY_IDIR)" npm run build
+
+    echo "=== Analyze ==="
+    cov-analyze \
+      --dir "$(COVERITY_IDIR)" \
+      --all \
+      --strip-path "$(Build.SourcesDirectory)" \
+      --jobs "$(nproc)"
+
+    echo "=== (Optional) Create HTML report for POC review ==="
+    rm -rf "$(COVERITY_REPORT_DIR)"
+    mkdir -p "$(COVERITY_REPORT_DIR)"
+    cov-format-errors \
+      --dir "$(COVERITY_IDIR)" \
+      --html-output "$(COVERITY_REPORT_DIR)"
+
+    echo "=== Commit defects to Coverity Connect ==="
+    cov-commit-defects \
+      --dir "$(COVERITY_IDIR)" \
+      --url "$(COVERITY_URL)" \
+      --stream "$(COVERITY_STREAM)" \
+      --scm git \
+      --description "ADO $(Build.DefinitionName) #$(Build.BuildNumber) - $(Build.SourceBranchName) - $(Build.SourceVersion)" \
+      --user "$(COVERITY_USER)" \
+      --password "$(COVERITY_PASSWORD)"
+
+    echo "=== Coverity scan completed ==="
+  displayName: "Coverity SAST Scan (Direct CLI)"
+
+# ------------------------------------------------------------
+# Publish artifacts (POC)
+# ------------------------------------------------------------
+- task: PublishBuildArtifacts@1
+  displayName: "Publish Coverity idir (POC)"
+  inputs:
+    pathToPublish: "$(COVERITY_IDIR)"
+    artifactName: "coverity-idir"
+  condition: always()
+
+- task: PublishBuildArtifacts@1
+  displayName: "Publish Coverity HTML report (POC)"
+  inputs:
+    pathToPublish: "$(COVERITY_REPORT_DIR)"
+    artifactName: "coverity-report"
+  condition: always()
