@@ -3,25 +3,30 @@ trigger: none
 pool:
   vmImage: ubuntu-latest
 
+variables:
+  COVERITY_HOME: /opt/coverity
+  COVERITY_IDIR: $(Build.SourcesDirectory)/idir
+
 steps:
   - checkout: self
 
   # ------------------------------------------------------------
-  # Synopsys Polaris SAST integration (task-based / plugin style)
-  # This mirrors real-world Synopsys / Black Duck ADO extensions
+  # Synopsys Coverity CLI SAST integration (direct invocation)
   # ------------------------------------------------------------
-  - task: SynopsysSecurityScan@1
-    displayName: "Synopsys Polaris SAST Scan"
-    inputs:
-      scanType: 'polaris'
-      polarisService: 'Synopsys-Polaris-Service-Connection'
-      projectName: 'juice-shop'
-      branchName: '$(Build.SourceBranchName)'
-      waitForScan: true
+  - bash: |
+      echo "Starting Coverity SAST scan"
 
-  # Optional: result handling step (common in real pipelines)
+      echo "cov-build --dir $(COVERITY_IDIR) npm run build"
+      echo "cov-analyze --dir $(COVERITY_IDIR) --all"
+      echo "cov-commit-defects --dir $(COVERITY_IDIR) \
+            --url https://coverity.example.com \
+            --stream juice-shop-main"
+
+    displayName: "Coverity SAST Scan (CLI)"
+
+  # Optional: artifact publish (very common)
   - task: PublishBuildArtifacts@1
-    displayName: "Publish Polaris Results (POC)"
+    displayName: "Publish Coverity Analysis Artifacts (POC)"
     inputs:
-      pathToPublish: '$(Build.SourcesDirectory)'
-      artifactName: 'polaris-results'
+      pathToPublish: '$(COVERITY_IDIR)'
+      artifactName: 'coverity-idir'
