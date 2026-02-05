@@ -1,0 +1,11 @@
+version: "1"
+stage:
+  polaris:
+    serverUrl: "${POLARIS_SERVER_URL}"
+    accessToken: "${POLARIS_ACCESS_TOKEN}"
+    application:
+      name: "juice-shop"
+    project:
+      name: "juice-shop"
+    branch:
+      name: "${BRANCH_NAME}"
