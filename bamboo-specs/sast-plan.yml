@@ -1,0 +1,20 @@
+version: 2
+
+plan:
+  project-key: POC
+  key: SAST
+  name: Polaris SAST via Bridge CLI (POC)
+
+stages:
+  - stage:
+      name: Scan
+      jobs:
+        - job:
+            key: POL
+            name: Polaris SAST
+            tasks:
+              - script:
+                  interpreter: BINSH_OR_CMDEXE
+                  scripts:
+                    - set -euo pipefail
+                    - ./ci-tools/bridge --stage polaris --input bridge.yml
