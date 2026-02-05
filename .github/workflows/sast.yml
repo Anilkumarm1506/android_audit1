@@ -1,17 +1,24 @@
-name: Synopsys SAST (Polaris) - Plugin
+name: Synopsys SAST (Polaris) - CLI
 on:
   workflow_dispatch:
 
 jobs:
-  polaris:
+  polaris_cli:
     runs-on: ubuntu-latest
+    env:
+      POLARIS_SERVER_URL: ${{ secrets.POLARIS_SERVER_URL }}
+      POLARIS_ACCESS_TOKEN: ${{ secrets.POLARIS_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Synopsys Action (Polaris SAST)
-        uses: synopsys-sig/synopsys-action@v1
-        with:
-          polaris_server_url: ${{ secrets.POLARIS_SERVER_URL }}
-          polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
-          polaris_application_name: juice-shop
-          polaris_project_name: juice-shop
+      - name: Download Bridge CLI
+        run: |
+          set -euo pipefail
+          mkdir -p .ci-tools
+          # Download bridge-cli (use your approved URL/mirror)
+          # chmod +x .ci-tools/bridge
+
+      - name: Run Bridge CLI (Polaris)
+        run: |
+          set -euo pipefail
+          ./.ci-tools/bridge --stage polaris --input bridge.yml
