@@ -1,32 +1,21 @@
 pipeline {
   agent any
-  environment {
-    POLARIS_SERVER_URL = credentials('polaris-server-url') // or use a string credential
-    POLARIS_ACCESS_TOKEN = credentials('polaris-access-token')
-  }
 
   stages {
     stage('Checkout') { steps { checkout scm } }
 
-    stage('Download Bridge CLI') {
+    stage('Coverity via Jenkins Plugin') {
       steps {
-        sh '''
-          set -euo pipefail
-          mkdir -p .ci-tools
-          # Example: download Bridge bundle from your internal mirror or official repo per docs
-          # (POC: place your real download method here)
-          echo "Download bridge-cli to .ci-tools/bridge"
-        '''
-      }
-    }
-
-    stage('Polaris SAST via Bridge CLI') {
-      steps {
-        sh '''
-          set -euo pipefail
-          chmod +x .ci-tools/bridge || true
-          .ci-tools/bridge --stage polaris --input bridge.yml
-        '''
+        // Plugin provides steps that bind Coverity tools/config into env
+        // (Exact step names depend on plugin + tool configuration in Jenkins Global Tool Config)
+        withCoverityEnv(coverityToolName: 'coverity-2023', connectInstance: 'coverity-connect') {
+          sh '''
+            set -euo pipefail
+            cov-build --dir idir npm ci && npm run build
+            cov-analyze --dir idir --all
+            cov-commit-defects --dir idir --stream juice-shop-main
+          '''
+        }
       }
     }
   }
