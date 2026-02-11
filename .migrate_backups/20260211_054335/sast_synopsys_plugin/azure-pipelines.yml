@@ -10,11 +10,11 @@ steps:
   # Synopsys Polaris SAST integration (task-based / plugin style)
   # This mirrors real-world Synopsys / Black Duck ADO extensions
   # ------------------------------------------------------------
-  - task: BlackDuckSecurityScan@1
+  - task: SynopsysSecurityScan@1
     displayName: "Synopsys Polaris SAST Scan"
     inputs:
-      scanType: 'blackduck'
-      blackDuckService: 'Synopsys-Polaris-Service-Connection'
+      scanType: 'polaris'
+      polarisService: 'Synopsys-Polaris-Service-Connection'
       projectName: 'juice-shop'
       branchName: '$(Build.SourceBranchName)'
       waitForScan: true
