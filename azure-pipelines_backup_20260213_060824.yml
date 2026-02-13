@@ -7,15 +7,15 @@ steps:
   - checkout: self
 
   # ------------------------------------------------------------
-  # Synopsys Bridge: Black Duck Coverity (SAST)
+  # Synopsys Bridge: Coverity on Polaris (SAST)
   # Using direct URL and token (hardcoded) per your request.
   # ------------------------------------------------------------
   - task: SynopsysBridge@1
-    displayName: "Black Duck Coverity (SAST)"
+    displayName: "Black Duck Coverity on Polaris (SAST)"
     inputs:
-      bridge_build_type: "blackduck"
-      blackduck_url: "$(BLACKDUCK_URL)"   # <-- actual URL
-      blackduck_api_token: "$(POLARIS_TOKEN)"     # <-- actual token
+      bridge_build_type: "polaris"
+      polaris_server_url: "https://polaris.test-example.com"   # <-- actual URL
+      polaris_access_token: "$(POLARIS_TOKEN)"     # <-- actual token
       polaris_project_name: "$(Build.Repository.Name)"
       polaris_branch_name: "$(Build.SourceBranchName)"
 
