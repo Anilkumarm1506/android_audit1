@@ -7,19 +7,19 @@ steps:
   - checkout: self
 
   # ------------------------------------------------------------
-  # Synopsys Polaris SAST integration (task-based / plugin style)
-  # This mirrors real-world Synopsys / Black Duck ADO extensions
+  # Synopsys Bridge: Coverity on Polaris (SAST)
+  # Using direct URL and token (hardcoded) per your request.
   # ------------------------------------------------------------
-  - task: SynopsysSecurityScan@1
-    displayName: "Synopsys Polaris SAST Scan"
+  - task: SynopsysBridge@1
+    displayName: "Black Duck Coverity on Polaris (SAST)"
     inputs:
-      scanType: 'polaris'
-      polarisService: 'Synopsys-Polaris-Service-Connection'
-      projectName: 'juice-shop'
-      branchName: '$(Build.SourceBranchName)'
-      waitForScan: true
+      bridge_build_type: "polaris"
+      polaris_server_url: "https://polaris.test-example.com"   # <-- actual URL
+      polaris_access_token: "$(POLARIS_TOKEN)"     # <-- actual token
+      polaris_project_name: "$(Build.Repository.Name)"
+      polaris_branch_name: "$(Build.SourceBranchName)"
 
-  # Optional: result handling step (common in real pipelines)
+  # Optional: publish artifacts (if you still want it)
   - task: PublishBuildArtifacts@1
     displayName: "Publish Polaris Results (POC)"
     inputs:
