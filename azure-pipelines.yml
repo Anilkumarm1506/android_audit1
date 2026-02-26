@@ -14,7 +14,7 @@ steps:
     displayName: "Synopsys Polaris SAST Scan"
     inputs:
       scanType: 'polaris'
-      polarisService: 'Synopsys-Polaris-Service-Connection'
+      polarisService: 'https://yourorg.polaris.synopsys.com'
       projectName: 'juice-shop'
       branchName: '$(Build.SourceBranchName)'
       waitForScan: true
